@@ -1,0 +1,1171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Balancing a City Budget</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,600;0,800;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#EDF0F2; --surface:#FFFFFF; --sunk:#E1E6EA; --ink:#16243A; --muted:#566170; --line:#C9D1D9;
+  --gold:#8A6510; --over:#B42318; --ok:#1E7046; --focus:#2F5D8C;
+  --heat:#2F5D8C; --heat-ink:#FFFFFF;
+  --font:"Public Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --r-sm:6px; --r-lg:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --bg:#0F1722; --surface:#172231; --sunk:#1F2D3F; --ink:#E7ECF2; --muted:#9DAABA; --line:#2E3E53;
+    --gold:#E0B04A; --over:#FF8A80; --ok:#5FD39A; --focus:#8DB8E8;
+    --heat:#8DB8E8; --heat-ink:#0F1722;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:1rem/1.5 var(--font); font-variant-numeric:tabular-nums;
+  padding-top:env(safe-area-inset-top,0px);
+}
+body.student.working{padding-bottom:calc(9.5rem + env(safe-area-inset-bottom,0px))}
+
+/* header */
+.bar{display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+  max-width:52rem; margin:0 auto; padding:1rem 1.25rem .25rem}
+body.teacher .bar, body.teacher main, body.teacher #demo{max-width:84rem}
+.brand{font-weight:900; font-size:1.02rem; letter-spacing:-.01em}
+#ctx{display:flex; align-items:center; gap:.75rem; color:var(--muted); font-size:.95rem}
+main{max-width:52rem; margin:0 auto; padding:.75rem 1.25rem 4rem}
+#demo{max-width:52rem; margin:.5rem auto 0; padding:0 1.25rem; font-size:.9rem; color:var(--muted)}
+#demo p{margin:0; padding:.6rem .9rem; border:1.5px dashed var(--line); border-radius:var(--r-sm)}
+#notice:empty{display:none}
+#notice{max-width:52rem; margin:.5rem auto 0; padding:.6rem 1.25rem; color:var(--over); font-weight:600}
+
+/* type */
+.display{font-weight:900; letter-spacing:-.035em; line-height:.98; font-size:clamp(2.4rem,8vw,4.2rem); margin:.6rem 0 .9rem}
+h2,h3{font-weight:800; letter-spacing:-.015em; line-height:1.2}
+h2{font-size:1.35rem; margin:0}
+h3{font-size:1.1rem; margin:0 0 .5rem}
+p{margin:.5rem 0}
+.lede{font-size:1.15rem; max-width:34em}
+.muted{color:var(--muted)}
+.small{font-size:.9rem}
+a{color:inherit; text-underline-offset:.18em}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+
+/* controls */
+button{font:inherit; color:inherit; cursor:pointer}
+.primary,.ghost,.danger{border-radius:999px; padding:.65rem 1.25rem; font-weight:800; border:2px solid var(--ink)}
+.primary{background:var(--ink); color:var(--bg)}
+.ghost{background:transparent}
+.danger{background:transparent; border-color:var(--over); color:var(--over)}
+.link{background:none; border:0; padding:0; text-decoration:underline; text-underline-offset:.18em; color:var(--muted)}
+button:disabled{opacity:.5; cursor:not-allowed}
+:focus-visible{outline:3px solid var(--focus); outline-offset:2px}
+input[type=text],select{font:inherit; color:var(--ink); background:var(--surface);
+  border:1.5px solid var(--line); border-radius:var(--r-sm); padding:.5rem .65rem}
+fieldset{border:0; padding:0; margin:1.6rem 0 0}
+legend{font-weight:800; margin-bottom:.6rem; padding:0}
+.actions{margin-top:1.8rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap}
+.status{font-weight:600}
+.status.err{color:var(--over)}
+
+/* pickers */
+.pills{display:flex; flex-wrap:wrap; gap:.5rem}
+.pills.groups{display:grid; grid-template-columns:repeat(auto-fill,minmax(4.2rem,1fr)); max-width:34rem}
+.pick{position:relative}
+.pick input{position:absolute; opacity:0; inset:0; margin:0}
+.pick span{display:block; text-align:center; padding:.6rem 1rem; border:2px solid var(--line);
+  border-radius:var(--r-sm); font-weight:800; background:var(--surface); min-width:3rem}
+.pills.groups .pick span{font-size:1.3rem; padding:.7rem .4rem}
+.pick input:checked + span{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.pick input:focus-visible + span{outline:3px solid var(--focus); outline-offset:2px}
+
+/* worksheet top */
+.cityhead{display:grid; grid-template-columns:1fr auto; gap:1rem 2rem; align-items:end; margin:.5rem 0 1rem}
+.cityname{font-weight:900; letter-spacing:-.03em; font-size:clamp(2rem,6vw,3rem); line-height:1.02; margin:0; overflow-wrap:anywhere}
+.profile-line{color:var(--muted); margin:.4rem 0 0; max-width:34em}
+.profile-line .link{margin-left:.25rem}
+
+/* setup: name the city, then four choices, then the budget reveal */
+.step{color:var(--muted); font-weight:700; margin:1.25rem 0 0}
+.ask{font-weight:900; letter-spacing:-.03em; line-height:1.04; font-size:clamp(2rem,6vw,3.2rem); margin:.3rem 0 1.25rem; overflow-wrap:anywhere}
+.namefield{width:100%; max-width:34rem; font-size:clamp(1.4rem,4.5vw,2rem) !important; font-weight:800; letter-spacing:-.02em; padding:.55rem .8rem !important}
+.choices{display:grid; gap:.6rem; max-width:40rem; border:0; padding:0; margin:0}
+.choice{position:relative; display:block; border:2px solid var(--line); border-radius:var(--r-lg); background:var(--surface);
+  padding:.9rem 1.1rem .95rem 3.1rem; cursor:pointer}
+.choice input{position:absolute; left:1.1rem; top:1.2rem; width:1.2rem; height:1.2rem; margin:0; accent-color:var(--ink)}
+.choice b{display:block; font-size:1.15rem}
+.choice span{color:var(--muted)}
+.choice:has(input:checked){border-color:var(--ink); box-shadow:inset 0 0 0 1px var(--ink)}
+.choice:has(input:focus-visible){outline:3px solid var(--focus); outline-offset:2px}
+.sub{font-size:1.15rem; margin:1.5rem 0 .5rem}
+.breakdown{max-width:44rem; background:var(--surface); border-radius:var(--r-lg)}
+.breakdown th,.breakdown td{padding:.6rem .9rem; vertical-align:top}
+.breakdown th{font-weight:700}
+.breakdown th span{display:block; font-weight:400; color:var(--muted); font-size:.92rem; max-width:30em}
+.breakdown tr + tr th,.breakdown tr + tr td{border-top:1px solid var(--sunk)}
+.breakdown .pct{color:var(--muted)}
+.breakdown .pos{color:var(--ok); font-weight:800}
+.breakdown .neg{color:var(--over); font-weight:800}
+.breakdown td.num{white-space:nowrap; font-weight:700}
+details.how{margin-top:.5rem; text-align:left}
+details.how summary{cursor:pointer; color:var(--muted); font-size:.92rem; text-align:right}
+details.how .breakdown{margin-top:.5rem; font-size:.9rem}
+.reveal{margin:1.5rem 0 .5rem}
+.reveal span{display:block; color:var(--muted)}
+.reveal strong{display:block; font-weight:900; letter-spacing:-.04em; line-height:1; font-size:clamp(3rem,12vw,5.5rem); color:var(--gold)}
+.comptroller{text-align:right}
+.comptroller span{display:block; color:var(--muted); font-size:.95rem}
+.comptroller strong{display:block; font-size:clamp(1.9rem,5.5vw,2.6rem); font-weight:900; letter-spacing:-.03em; line-height:1.05; color:var(--gold)}
+@media (max-width:600px){ .cityhead{grid-template-columns:1fr} .comptroller{text-align:left} }
+#banner:empty{display:none}
+#banner{margin:.5rem 0 1rem; padding:.85rem 1rem; border-radius:var(--r-sm); background:var(--sunk); border-left:5px solid var(--ink)}
+#banner p{margin:0}
+#banner .actions{margin-top:.6rem}
+.deptnav{display:flex; gap:.4rem; overflow-x:auto; padding:.25rem 0 .75rem; scrollbar-width:thin}
+.deptnav a{flex:none; text-decoration:none; font-size:.85rem; font-weight:600; padding:.3rem .65rem;
+  border-radius:999px; border:1.5px solid var(--line); background:var(--surface); white-space:nowrap}
+
+/* departments */
+.dept{background:var(--surface); border-radius:var(--r-lg); margin:0 0 1rem; scroll-margin-top:1rem}
+.dept-head{padding:1rem 1.1rem .75rem; border-bottom:1.5px solid var(--line)}
+.dept-sum{display:flex; flex-wrap:wrap; gap:.25rem 1.25rem; margin-top:.3rem; color:var(--muted); font-size:.92rem}
+.dept-sum b{color:var(--ink)}
+.dept-bar{height:6px; border-radius:3px; background:var(--sunk); margin-top:.6rem; overflow:hidden}
+.dept-bar i{display:block; height:100%; width:0; background:var(--ink); transition:width .25s}
+.cols{display:grid; grid-template-columns:1fr 6.5rem 15.5rem; gap:1rem; padding:.5rem 1.1rem 0; font-size:.82rem; font-weight:600; color:var(--muted)}
+.cols span:nth-child(2){text-align:right}
+.item{display:grid; grid-template-columns:1fr 6.5rem 15.5rem; gap:.4rem 1rem; align-items:center;
+  padding:.65rem 1.1rem; border-top:1px solid var(--sunk)}
+.cols + .item{border-top:0}
+.item-name{margin:0}
+.req{text-align:right; font-weight:600}
+.ctl{display:flex; gap:.35rem; align-items:center}
+.seg{border:1.5px solid var(--line); background:transparent; border-radius:var(--r-sm); padding:.38rem .6rem; font-weight:700; font-size:.9rem}
+.seg[aria-pressed=true]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.amt{display:flex; align-items:center; flex:1; min-width:0; border:1.5px solid var(--line); border-radius:var(--r-sm); background:var(--surface); padding:0 .5rem}
+.amt span{color:var(--muted)}
+.amt input{border:0; background:transparent; width:100%; min-width:0; padding:.4rem .2rem; font:inherit; font-weight:700; color:var(--ink); text-align:right}
+.amt input:focus{outline:none}
+.amt:focus-within{outline:3px solid var(--focus); outline-offset:1px}
+.item.partial .amt{border-color:var(--gold)}
+@media (max-width:640px){
+  .cols{display:none}
+  .item{grid-template-columns:1fr auto; padding:.75rem .9rem}
+  .item-name{grid-column:1 / -1}
+  .req::before{content:"Requested"; display:block; font-size:.8rem; font-weight:400; color:var(--muted)}
+  .req{text-align:left; grid-column:1; grid-row:2}
+  .ctl{grid-column:2; grid-row:2; width:14rem}
+}
+.locked .seg,.locked .amt input,.submitted .seg,.submitted .amt input{pointer-events:none}
+.locked .ctl,.submitted .ctl{opacity:.6}
+
+/* ledger: the sticky running total */
+#ledger{position:fixed; left:0; right:0; bottom:0; z-index:5; background:var(--ink); color:var(--bg);
+  padding:.75rem 1.25rem calc(.75rem + env(safe-area-inset-bottom,0px))}
+#ledger[hidden]{display:none}
+.ledger-in{max-width:52rem; margin:0 auto}
+.ledger-nums{display:grid; grid-template-columns:repeat(4,1fr); gap:.5rem 1rem; margin:0}
+.ledger-nums div{min-width:0}
+.ledger-nums dt{font-size:.8rem; opacity:.75}
+.ledger-nums dd{margin:0; font-weight:900; font-size:clamp(1.05rem,3.6vw,1.5rem); letter-spacing:-.02em; white-space:nowrap}
+.ledger-nums .var dd.over{color:#FFB4AB}
+.meter{position:relative; height:10px; border-radius:5px; background:rgba(127,127,127,.35); margin:.55rem 0 .5rem; overflow:hidden}
+.meter i{position:absolute; left:0; top:0; bottom:0; width:0; background:var(--bg); transition:width .25s}
+.meter.over i{background:#FFB4AB}
+.ledger-row{display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap; font-size:.9rem}
+.ledger-row .primary{background:var(--bg); color:var(--ink); border-color:var(--bg); padding:.5rem 1.1rem}
+.ledger-row .ghost{border-color:var(--bg); color:var(--bg); padding:.5rem 1.1rem}
+#saveState.err{color:#FFB4AB; font-weight:700}
+.ledger-nums dd small{font-size:.62em; font-weight:700}
+@media (max-width:600px){ .ledger-nums{grid-template-columns:repeat(3,1fr)} .ledger-nums .req-total{display:none} .ledger-nums dd{white-space:normal; line-height:1.15} .ledger-nums dd small{display:block} }
+
+/* teacher */
+.tbar{display:flex; flex-wrap:wrap; align-items:center; gap:.75rem 1.25rem; margin:.25rem 0 1.25rem}
+.tabs{display:flex; gap:.25rem; background:var(--sunk); padding:.25rem; border-radius:999px}
+.tabs button{border:0; background:transparent; padding:.45rem 1rem; border-radius:999px; font-weight:700}
+.tabs button[aria-selected=true]{background:var(--surface); box-shadow:0 0 0 1.5px var(--line)}
+.tactions{display:flex; gap:.5rem; margin-left:auto; flex-wrap:wrap}
+.tactions button{padding:.45rem 1rem}
+.panel{background:var(--surface); border-radius:var(--r-lg); padding:1.1rem 1.2rem 1.25rem; margin-bottom:1.25rem}
+.panel > p:first-of-type{margin-top:.25rem}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse; width:100%}
+th,td{padding:.5rem .6rem; text-align:left; vertical-align:middle}
+thead th{font-size:.82rem; color:var(--muted); font-weight:600; border-bottom:1.5px solid var(--line); white-space:nowrap}
+tbody tr + tr td, tbody tr + tr th{border-top:1px solid var(--sunk)}
+td.num,th.num{text-align:right; white-space:nowrap}
+.prog td,.prog th[scope=row]{white-space:nowrap}
+.prog .city{white-space:normal; font-weight:700; min-width:10rem}
+.prog .city small{display:block; font-weight:400; color:var(--muted); font-size:.82rem; max-width:16rem}
+.prog select{padding:.3rem .4rem}
+.prog .final small{display:block; font-size:.8rem; font-weight:600; color:var(--muted)}
+.prog .final small.pos{color:var(--ok)} .prog .final small.neg{color:var(--over)}
+.mini{width:9rem; height:8px; border-radius:4px; background:var(--sunk); position:relative; overflow:hidden}
+.mini i{position:absolute; left:0; top:0; bottom:0; background:var(--ink)}
+.mini.over i{background:var(--over)}
+.pill{display:inline-block; font-size:.82rem; font-weight:700; padding:.15rem .55rem; border-radius:999px; border:1.5px solid var(--line)}
+.pill.sub{background:var(--ok); border-color:var(--ok); color:var(--surface)}
+.pill.over{border-color:var(--over); color:var(--over)}
+.pill.none{color:var(--muted); border-style:dashed}
+.over-t{color:var(--over); font-weight:700}
+
+/* priorities */
+.rank{display:grid; grid-template-columns:minmax(10rem,18rem) 1fr 4rem; gap:.4rem 1rem; align-items:center}
+.rank .bar-t{height:14px; border-radius:3px; background:var(--sunk); position:relative; overflow:hidden}
+.rank .bar-t i{position:absolute; inset:0 auto 0 0; background:var(--heat)}
+.rank .pct{font-weight:800; text-align:right}
+.toggle{display:inline-flex; gap:.25rem; background:var(--sunk); padding:.2rem; border-radius:999px; margin:.25rem 0 .75rem}
+.toggle button{border:0; background:transparent; padding:.3rem .8rem; border-radius:999px; font-weight:700; font-size:.9rem}
+.toggle button[aria-pressed=true]{background:var(--surface); box-shadow:0 0 0 1.5px var(--line)}
+.heat th[scope=row]{font-weight:600; min-width:14rem; max-width:22rem; position:sticky; left:0; background:var(--surface); z-index:1}
+.heat th.dept-row{font-weight:800; padding-top:.9rem}
+.heat thead th{text-align:center; vertical-align:bottom}
+.heat thead th small{display:block; font-weight:400; width:5.5rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:0 auto}
+.heat td{text-align:center; font-weight:700; font-size:.88rem; min-width:3.6rem; border:2px solid var(--surface)}
+.heat td.hi{color:var(--heat-ink)}
+.heat td.nd{color:var(--muted); font-weight:400}
+.heat td.avg, .heat th.avg{border-left:3px solid var(--line)}
+.stack-row{display:grid; grid-template-columns:minmax(8rem,14rem) 1fr; gap:.5rem 1rem; align-items:center; margin:.5rem 0}
+.stack-row .lab{font-weight:700; line-height:1.2}
+.stack-row .lab small{display:block; font-weight:400; color:var(--muted)}
+.stack{position:relative; height:26px}
+.stack .track{position:absolute; top:0; bottom:0; left:0; border:1.5px dashed var(--line); border-radius:3px}
+.stack .segs{position:absolute; top:3px; bottom:3px; left:0; display:flex}
+.stack .segs i{display:block; height:100%}
+.legend{display:flex; flex-wrap:wrap; gap:.35rem 1rem; margin:.25rem 0 .75rem; font-size:.85rem}
+.legend span{display:inline-flex; align-items:center; gap:.35rem}
+.legend b{width:.85rem; height:.85rem; border-radius:2px; display:inline-block}
+.pairs{display:grid; grid-template-columns:repeat(auto-fit,minmax(20rem,1fr)); gap:1rem}
+.pair{border:1.5px solid var(--line); border-radius:var(--r-sm); padding:.75rem .9rem}
+.pair table td,.pair table th{padding:.3rem .4rem; font-size:.9rem}
+.pair thead th{white-space:normal; vertical-align:bottom}
+.empty{padding:2rem 1rem; text-align:center; color:var(--muted)}
+
+#tstamp{margin-top:-.5rem}
+
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+<header class="bar"><span class="brand">Balancing a City Budget</span><span id="ctx"></span></header>
+<div id="demo"></div>
+<div id="notice" role="alert"></div>
+<main id="app"></main>
+<div id="ledger" hidden></div>
+
+<script>
+/* =========================================================
+   Settings
+   ========================================================= */
+const CONFIG = {
+  API_URL: 'https://script.google.com/macros/s/AKfycbzahFlAVqFD92g38VU5UWwZKI6s_yXLG6FL-h0xoiDw1chNODvxqaPYlIALUHjNPMkVPA/exec', // '' = demo mode
+  GROUP_COUNT: 7,              // how many group buttons students see
+  SAVE_DELAY_MS: 1200,         // wait this long after a change before saving
+  POLL_MS: 15000,              // how often a student screen checks for a lock or a new budget
+  TEACHER_POLL_MS: 6000        // how often the teacher screen refreshes
+};
+
+// Requests from the "Balancing A City Budget" Google Sheet, in its order and wording.
+// Don't reorder or delete items once a class has started: saved budgets refer to them by position.
+const DEPARTMENTS = [
+  { id: 'usd', name: 'Unified School District', items: [
+    ['After-school tutoring programs in underserved neighborhoods', 45000],
+    ['Technology upgrades for classrooms in the Mission District', 75000],
+    ['Drivers education programs', 60000],
+    ['Multilingual education resources for ESL students', 40000],
+    ['School lunch program expansion', 55000],
+    ['Mental health counselors for teens citywide', 80000]]},
+  { id: 'dph', name: 'Department of Public Health', items: [
+    ['Mobile health clinics for the Tenderloin neighborhood', 90000],
+    ['Expanded prenatal care services in Bayview-Hunters Point', 65000],
+    ['Substance abuse treatment center improvements', 70000],
+    ['Travel and vacation services for residents abroad', 50000],
+    ['Mental health crisis response team', 85000],
+    ['Environmental health assessment for housing projects', 40000]]},
+  { id: 'muni', name: 'Municipal Transportation Agency (MUNI)', items: [
+    ['New electric buses for crowded routes', 110000],
+    ['Free transit passes for low-income residents', 60000],
+    ['Bus stop improvements in Visitacion Valley', 35000],
+    ['Transit accessibility upgrades for disabled riders', 50000],
+    ['Waymo reimbursement for teens', 30000],
+    ['Transit route expansion to underserved areas', 70000]]},
+  { id: 'sfpd', name: 'Police Department', items: [
+    ['Community policing program', 60000],
+    ['De-escalation training for officers', 45000],
+    ['Body camera program expansion', 55000],
+    ['Youth outreach initiative', 40000],
+    ['Crime prevention in high-value neighborhoods', 65000],
+    ['Crime prevention in high-crime neighborhoods', 65000]]},
+  { id: 'fire', name: 'Fire Department', items: [
+    ['New equipment for station in Bayview-Hunters Point', 70000],
+    ['New equipment for station in Forest Hill', 70000],
+    ['Emergency response training for non-English-speakers', 40000],
+    ['Station repairs in the Mission District', 60000],
+    ['Paramedic training for treating elderly', 45000]]},
+  { id: 'rec', name: 'Department of Recreation and Parks', items: [
+    ['Playground renovations in Chinatown', 55000],
+    ['Community garden program in Bayview', 40000],
+    ['After-school recreation programs in Pacific Heights', 50000],
+    ['Park maintenance in the Western Addition', 45000],
+    ['Tree planting and maintenance near the Presidio', 60000],
+    ['Tree planting and maintenance near Hunters Point', 60000]]},
+  { id: 'hsh', name: 'Department of Homelessness and Supportive Housing', items: [
+    ['Shelter expansions in SoMa', 95000],
+    ['Transitional housing program', 85000],
+    ['Mental health services for homeless individuals', 75000],
+    ['Job training for homeless youth', 60000],
+    ['Outreach workers for encampments', 50000]]},
+  { id: 'oewd', name: 'Office of Economic and Workforce Development', items: [
+    ['Small business grants for minority-owned businesses', 70000],
+    ['Job training for formerly incarcerated individuals', 55000],
+    ['Youth employment program', 65000],
+    ['Entrepreneurship workshops in underserved communities', 40000],
+    ['English language classes for immigrant workers', 35000]]},
+  { id: 'puc', name: 'Public Utilities Commission', items: [
+    ['Water conservation program in low-income neighborhoods', 65000],
+    ['Solar panel installations for public housing', 90000],
+    ['Green infrastructure in flood-prone areas', 75000],
+    ['Energy efficiency upgrades for public schools', 60000],
+    ['Community water quality testing program', 40000],
+    ['Sewage system improvements in older neighborhoods', 85000]]},
+  { id: 'lib', name: 'Public Library', items: [
+    ['Multilingual book collection expansion', 40000],
+    ['Computer lab upgrades in Bayview branch', 35000],
+    ['Expansion of book collection on AI and coding', 40000],
+    ['Cultural heritage preservation project', 25000],
+    ['Extended hours for branches in high-need areas', 45000]]}
+];
+
+// The city profile each group chooses before it sees its budget. The choice labels are saved in the Google Sheet,
+// and the teacher view compares spending by them.
+const PROFILE = [
+  { key: 'setting', title: 'Setting', ask: c => `Is ${c} urban, suburban or rural?`, choices: [
+    { label: 'Urban', desc: 'Dense neighborhoods, apartment buildings, and lots of people on buses and trains.', a: 'an urban' },
+    { label: 'Suburban', desc: 'Mostly single-family homes and shopping centers. Most people drive.', a: 'a suburban' },
+    { label: 'Rural', desc: 'A small town surrounded by open land, with long distances between everything.', a: 'a rural' }]},
+  { key: 'economy', title: 'Economy', ask: c => `What keeps ${c} running?`, choices: [
+    { label: 'Industry-focused', desc: 'Factories, warehouses, and a port or rail yard employ many residents.', noun: 'industrial hub' },
+    { label: 'Bedroom community', desc: 'Most residents commute to jobs in a bigger city nearby.', noun: 'bedroom community' },
+    { label: 'Service center', desc: 'Hospitals, colleges, offices and shops serve people from all over the region.', noun: 'service center' }]},
+  { key: 'residents', title: 'Residents', ask: c => `Who lives in ${c}?`, choices: [
+    { label: 'Mostly working-class', desc: 'Many families rent, and many residents work hourly jobs.', clause: 'where most residents are working-class' },
+    { label: 'Mixed-income', desc: 'Wealthy, middle-class and low-income neighborhoods sit side by side.', clause: 'with residents of every income level' },
+    { label: 'Mostly wealthy', desc: 'Home prices are high, and most residents own their homes.', clause: 'where most residents are wealthy' }]},
+  { key: 'location', title: 'Location', ask: c => `Where is ${c}?`, choices: [
+    { label: 'On the coast', desc: 'Rising seas and winter storms flood low-lying neighborhoods.', where: 'on the coast' },
+    { label: 'In the hills', desc: 'Wildfire season gets longer every year.', where: 'in the hills' },
+    { label: 'In a valley', desc: 'Summer heat waves, and smog that gets trapped over the city.', where: 'in a valley' }]}
+];
+const choiceOf = (q, label) => q.choices.find(c => c.label === label) || null;
+function describe(city, prof){
+  const [s, e, r, l] = PROFILE.map(q => choiceOf(q, (prof || {})[q.key]));
+  if (!s || !e || !r || !l) return '';
+  return `${city} is ${s.a} ${e.noun} ${l.where}, ${r.clause}.`;
+}
+
+// Teacher view only: requests that differ only by neighborhood.
+const PAIRS = [['rec5', 'rec6'], ['fire2', 'fire1'], ['sfpd5', 'sfpd6']];
+
+const DEPT_COLORS = ['#4E79A7', '#76B7B2', '#E15759', '#B07AA1', '#F28E2B', '#59A14F', '#9C755F', '#EDC948', '#FF9DA7', '#BAB0AC'];
+
+/* ---------- derived lists ---------- */
+const ITEMS = [];
+DEPARTMENTS.forEach((d, di) => {
+  d.color = DEPT_COLORS[di % DEPT_COLORS.length];
+  d.total = 0;
+  d.items = d.items.map(([name, req], i) => {
+    const it = { id: d.id + (i + 1), name: name, req: req, dept: d };
+    d.total += req; ITEMS.push(it); return it;
+  });
+});
+const ITEM = Object.fromEntries(ITEMS.map(it => [it.id, it]));
+const TOTAL_REQUESTED = ITEMS.reduce((s, it) => s + it.req, 0);
+
+/* ---------- small helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => '$' + Math.round(Math.abs(n)).toLocaleString('en-US');
+const num = s => { const d = String(s).replace(/[^\d]/g, ''); return d === '' ? null : Number(d); };
+const Store = {
+  get(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
+};
+function ago(iso){
+  if (!iso) return '';
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 45) return 'just now';
+  if (s < 3600) return Math.round(s / 60) + ' min ago';
+  if (s < 86400) return Math.round(s / 3600) + ' hr ago';
+  return new Date(iso).toLocaleDateString();
+}
+function deptTotals(alloc){
+  const o = {};
+  DEPARTMENTS.forEach(d => { o[d.id] = 0; });
+  Object.keys(alloc || {}).forEach(k => { if (ITEM[k] && alloc[k] != null) o[ITEM[k].dept.id] += Number(alloc[k]) || 0; });
+  return o;
+}
+function notice(msg){ $('#notice').textContent = msg || ''; }
+
+/* =========================================================
+   Data layer: Apps Script when API_URL is set, otherwise this browser only
+   ========================================================= */
+async function call(params){
+  if (!CONFIG.API_URL) return Local.handle(JSON.parse(JSON.stringify(params)));
+  const isRead = params.action === 'state' || params.action === 'teacher';
+  const res = isRead
+    ? await fetch(CONFIG.API_URL + '?' + new URLSearchParams(params), { cache: 'no-store' })
+    : await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(params) }); // text/plain: no CORS preflight
+  if (!res.ok) throw new Error('The Google Sheet didn’t answer (error ' + res.status + '). Try again in a moment.');
+  const d = await res.json();
+  if (!d.ok) throw new Error(d.error || 'Something went wrong.');
+  return d;
+}
+
+// Demo mode: a copy of Code.gs's rules that keeps everything in this browser.
+const RESTARTED = 'Your teacher reset the simulation. Choose your group again to open your new budget.';
+const Local = {
+  KEY: 'cityBudget.demo.v3',
+  BUDGETS: [4000000, 3000000, 2750000, 2500000, 2500000, 2250000, 2000000],
+  // Copy of EFFECTS in Code.gs, used only in demo mode.
+  EFFECTS: {
+    setting: { 'Urban': [5, 'More people and businesses on each block means more property and sales tax.'],
+               'Suburban': [0, 'An average tax base: homes and shopping centers, but few big employers.'],
+               'Rural': [-5, 'Fewer people and businesses, spread over more land, bring in less tax.'] },
+    economy: { 'Industry-focused': [6, 'Factories, warehouses, ports and rail yards pay business and property taxes.'],
+               'Bedroom community': [-4, 'Residents work and shop in other cities, so most of their sales and business taxes go there.'],
+               'Service center': [2, 'Shops and offices bring in sales tax, but hospitals and colleges are often tax-exempt nonprofits.'] },
+    residents: { 'Mostly working-class': [-6, 'Lower home values mean less property tax.'],
+                 'Mixed-income': [0, 'Property tax from a mix of home values.'],
+                 'Mostly wealthy': [8, 'High home values bring in more property tax.'] },
+    location: { 'On the coast': [-4, 'Seawall upkeep and flood repairs come out of the budget first.'],
+                'In the hills': [-3, 'Clearing brush and cutting fire breaks come out of the budget first.'],
+                'In a valley': [-3, 'Cooling centers and air-quality alerts come out of the budget first.'] }
+  },
+  KEYS: ['setting', 'economy', 'residents', 'location'],
+  load(){ try { const d = JSON.parse(localStorage.getItem(this.KEY)); if (d && d.rows) return d; } catch (e) {} return { locked: false, rows: [], archive: [] }; },
+  save(db){ try { localStorage.setItem(this.KEY, JSON.stringify(db)); } catch (e) {} },
+  set(pr){ return this.KEYS.every(k => pr && this.EFFECTS[k][pr[k]]); },
+  effects(base, pr){
+    if (!this.set(pr)) return [];
+    return this.KEYS.map(k => { const e = this.EFFECTS[k][pr[k]]; return { question: k, choice: pr[k], pct: e[0], amount: Math.round(base * e[0] / 100 / 1000) * 1000, why: e[1] }; });
+  },
+  final(base, pr){ return this.effects(base, pr).reduce((s, e) => s + e.amount, base); },
+  pub(r){ return r && Object.assign({}, r, { profileSet: this.set(r.profile), effects: this.effects(r.base, r.profile) }); },
+  find(db, group){ return db.rows.find(r => r.group === group) || null; },
+  create(db, group){
+    const pool = this.BUDGETS.slice();
+    db.rows.forEach(r => { const i = pool.indexOf(r.base); if (i > -1) pool.splice(i, 1); });
+    const from = pool.length ? pool : this.BUDGETS;
+    const base = from[Math.floor(Math.random() * from.length)];
+    const r = { group, city: '', profile: {}, base, budget: base, granted: 0, decided: 0, submitted: false, updated: new Date().toISOString(), alloc: {} };
+    db.rows.push(r); return r;
+  },
+  teacher(db){
+    return { ok: true, budgets: [...new Set(this.BUDGETS)].sort((a, b) => b - a), locked: !!db.locked, groups: db.rows.map(r => this.pub(r)), at: new Date().toISOString() };
+  },
+  handle(p){
+    const db = this.load();
+    const group = Number(p.group);
+    const fail = m => { throw new Error(m); };
+    let out;
+    switch (p.action) {
+      case 'state': out = { ok: true, locked: !!db.locked, me: this.pub(this.find(db, group)) }; break;
+      case 'join': out = { ok: true, locked: !!db.locked, me: this.pub(this.find(db, group) || this.create(db, group)) }; break;
+      case 'setProfile': {
+        const me = this.find(db, group); if (!me) fail(RESTARTED);
+        if (this.set(me.profile)) { out = { ok: true, already: true, locked: !!db.locked, me: this.pub(me) }; break; }
+        const pr = Object.fromEntries(this.KEYS.map(k => [k, String((p.profile || {})[k] || '')]));
+        if (!this.set(pr)) fail('Answer all four questions about your city first.');
+        const city = String(p.city || '').trim().slice(0, 60); if (!city) fail('Name your city first.');
+        Object.assign(me, { city, profile: pr, budget: this.final(me.base, pr), updated: new Date().toISOString() });
+        out = { ok: true, locked: !!db.locked, me: this.pub(me) }; break;
+      }
+      case 'rename': {
+        const me = this.find(db, group); if (!me) fail(RESTARTED);
+        const city = String(p.city || '').trim().slice(0, 60); if (!city) fail('Type a name for your city.');
+        me.city = city; out = { ok: true, locked: !!db.locked, me: this.pub(me) }; break;
+      }
+      case 'save': {
+        if (db.locked) fail('Your teacher has locked budgets, so changes can’t be saved.');
+        const me = this.find(db, group); if (!me) fail(RESTARTED);
+        const alloc = {}; let granted = 0, decided = 0;
+        Object.keys(p.alloc || {}).forEach(k => { if (p.alloc[k] == null) return; const n = Math.max(0, Math.round(p.alloc[k])); alloc[k] = n; granted += n; decided++; });
+        if (p.submitted && granted > me.budget) fail('This budget is over by $' + (granted - me.budget).toLocaleString('en-US') + '. Cut some grants before submitting.');
+        Object.assign(me, { granted, decided, submitted: !!p.submitted, updated: new Date().toISOString(), alloc });
+        out = { ok: true, locked: false, me: this.pub(me) }; break;
+      }
+      case 'teacher': out = this.teacher(db); break;
+      case 'setBudget': {
+        const me = this.find(db, group) || this.create(db, group);
+        me.base = Number(p.budget); me.budget = this.set(me.profile) ? this.final(me.base, me.profile) : me.base;
+        if (me.granted > me.budget) me.submitted = false;
+        out = this.teacher(db); break;
+      }
+      case 'setLock': db.locked = !!p.locked; out = this.teacher(db); break;
+      case 'reset':
+        db.archive.push(...db.rows.map(r => Object.assign({ archived: new Date().toISOString() }, r)));
+        db.rows = []; db.locked = false;
+        out = this.teacher(db); break;
+      default: fail('Unknown action.');
+    }
+    this.save(db);
+    return JSON.parse(JSON.stringify(out));
+  }
+};
+
+/* =========================================================
+   Student view
+   ========================================================= */
+const S = { group: null, me: null, alloc: {}, city: '', profile: {}, step: 0, draft: null, locked: false, submitted: false,
+            pending: null, saving: false, version: 0, savedVersion: 0, lastError: '' };
+
+function startStudent(){
+  document.body.classList.add('student');
+  S.group = Number(Store.get('cityBudget.group')) || null;
+  renderJoin();
+  setInterval(() => { if (!document.hidden && S.me) poll(); }, CONFIG.POLL_MS + Math.floor(Math.random() * 3000));
+  if (!CONFIG.API_URL) window.addEventListener('storage', e => { if (e.key === Local.KEY && S.me) poll(); });
+  window.addEventListener('pagehide', flushOnLeave);
+}
+
+function renderJoin(){
+  document.body.classList.remove('working', 'locked', 'submitted');
+  $('#ledger').hidden = true;
+  $('#ctx').innerHTML = '';
+  let groups = '';
+  for (let g = 1; g <= CONFIG.GROUP_COUNT; g++) groups += `<label class="pick"><input type="radio" name="group" value="${g}"${g === S.group ? ' checked' : ''}><span>${g}</span></label>`;
+  $('#app').innerHTML = `
+    <h1 class="display">Balancing a City Budget</h1>
+    <p class="lede">You’re the Board of Supervisors, and you need to balance the budget for the city. But departments are requesting more money than the city can afford to spend, so you’ll need to make choices about where to allocate the money.</p>
+    <fieldset><legend>Group number</legend><div class="pills groups">${groups}</div></fieldset>
+    <div class="actions"><button class="primary" id="go">Open our budget</button><span class="status" id="joinStatus" role="status"></span></div>
+    <p class="small muted" style="margin-top:1.5rem">Everyone in your group can open the same budget, but only one person should make changes at a time.</p>`;
+  $('#go').onclick = join;
+}
+
+async function join(){
+  const g = document.querySelector('input[name=group]:checked');
+  const st = $('#joinStatus');
+  if (!g) { st.className = 'status err'; st.textContent = 'Choose your group number.'; return; }
+  $('#go').disabled = true; st.className = 'status'; st.textContent = 'Opening…';
+  try {
+    const d = await call({ action: 'join', group: Number(g.value) });
+    S.group = Number(g.value);
+    Store.set('cityBudget.group', String(S.group));
+    S.me = d.me; S.locked = !!d.locked; S.submitted = !!d.me.submitted;
+    S.alloc = Object.assign({}, d.me.alloc || {}); S.city = d.me.city || '';
+    S.profile = Object.assign({}, d.me.profile || {});
+    S.version = S.savedVersion = 0; S.lastError = '';
+    notice('');
+    if (d.me.profileSet) renderSheet(); else startSetup();
+  } catch (err) {
+    $('#go').disabled = false; st.className = 'status err'; st.textContent = err.message;
+  }
+}
+
+/* ----- setup: name the city, describe it, then see the budget ----- */
+// Answers can change freely until the group asks to see its budget. Then the server sets the budget from them, for good.
+function startSetup(){
+  S.draft = { city: S.city, profile: Object.assign({}, S.profile) };
+  S.step = 0;
+  renderSetup();
+}
+
+function renderSetup(){
+  document.body.classList.remove('working', 'locked', 'submitted');
+  $('#ledger').hidden = true;
+  $('#ctx').innerHTML = `<span>Group ${S.group}</span><button class="link" id="switch">Switch group</button>`;
+  $('#switch').onclick = async () => { await flush(); S.me = null; renderJoin(); };
+  const D = S.draft, last = PROFILE.length + 1, step = S.step;
+  let body = '';
+  if (step === 0) {
+    body = `<h1 class="ask">Name your city.</h1>
+      <p class="lede">Your group is its Board of Supervisors. Next you’ll describe your city. Choose carefully: your answers shape the city’s budget, and once you see the budget they’re final.</p>
+      <p><label class="sr" for="cityName">City name</label>
+      <input type="text" class="namefield" id="cityName" maxlength="60" autocomplete="off" placeholder="City name" value="${esc(D.city)}"></p>`;
+  } else if (step <= PROFILE.length) {
+    const q = PROFILE[step - 1];
+    body = `<h1 class="ask" id="ask">${esc(q.ask(D.city.trim()))}</h1>
+      <div class="choices" role="radiogroup" aria-labelledby="ask">${q.choices.map(c => `
+        <label class="choice"><input type="radio" name="pick" value="${esc(c.label)}"${D.profile[q.key] === c.label ? ' checked' : ''}><b>${esc(c.label)}</b><span>${esc(c.desc)}</span></label>`).join('')}
+      </div>
+      ${step === PROFILE.length ? '<p class="muted" style="margin-top:1rem">This is the last question. When you choose <strong>See our budget</strong>, all of your answers become final.</p>' : ''}`;
+  } else {
+    body = revealHTML();
+  }
+  const backBtn = step > 0 && step < last ? '<button class="ghost" id="back">Back</button>' : '';
+  const nextLabel = step === last ? 'Open the budget requests' : step === PROFILE.length ? 'See our budget' : 'Next';
+  $('#app').innerHTML = `<p class="step">Step ${step + 1} of ${last + 1}</p>${body}
+    <div class="actions">${backBtn}<button class="primary" id="next">${nextLabel}</button><span class="status err" id="setupStatus" role="status"></span></div>`;
+
+  const next = $('#next');
+  const ready = () => {
+    if (step === 0) return !!$('#cityName').value.trim();
+    if (step <= PROFILE.length) return !!document.querySelector('input[name=pick]:checked');
+    return true;
+  };
+  next.disabled = !ready();
+  if (step === 0) {
+    const inp = $('#cityName');
+    inp.addEventListener('input', () => { D.city = inp.value; next.disabled = !ready(); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter' && ready()) next.click(); });
+    inp.focus();
+  } else if (step <= PROFILE.length) {
+    document.querySelectorAll('input[name=pick]').forEach(r => r.addEventListener('change', () => {
+      D.profile[PROFILE[step - 1].key] = r.value; next.disabled = false;
+    }));
+  } else {
+    countUp($('#reveal'), S.me.budget);
+  }
+  if ($('#back')) $('#back').onclick = () => { S.step--; renderSetup(); };
+  next.onclick = async () => {
+    if (step === 0) D.city = D.city.trim();
+    if (step < PROFILE.length) { S.step++; renderSetup(); return; }
+    if (step === last) { renderSheet(); return; }
+    // Last question answered: ask the server to set the budget. After this the answers can't change.
+    next.disabled = true; $('#setupStatus').className = 'status'; $('#setupStatus').textContent = 'Calculating…';
+    try {
+      const d = await call({ action: 'setProfile', group: S.group, city: D.city, profile: D.profile });
+      S.me = d.me; S.city = d.me.city; S.profile = Object.assign({}, d.me.profile); S.locked = !!d.locked;
+      notice(d.already ? 'Someone else in your group already set up your city, so these are their answers.' : '');
+      S.step = last; renderSetup();
+    } catch (err) {
+      if (/reset the simulation/i.test(err.message)) { notice(RESTARTED); S.me = null; renderJoin(); return; }
+      next.disabled = false; $('#setupStatus').className = 'status err'; $('#setupStatus').textContent = err.message;
+    }
+  };
+}
+
+const sign = n => (n > 0 ? '+' : n < 0 ? '−' : '') + fmt(n);
+const pctText = n => (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + '%';
+
+// The reveal: the starting budget, what each choice did to it, and the result.
+function breakdownRows(me){
+  return `<tr><th scope="row">Comptroller’s starting budget</th><td></td><td class="num">${fmt(me.base)}</td></tr>` +
+    (me.effects || []).map(e => `<tr><th scope="row">${esc(e.choice)}<span>${esc(e.why)}</span></th>
+      <td class="num pct">${pctText(e.pct)}</td><td class="num ${e.amount < 0 ? 'neg' : e.amount > 0 ? 'pos' : ''}">${e.amount ? sign(e.amount) : '$0'}</td></tr>`).join('');
+}
+
+function revealHTML(){
+  const me = S.me;
+  const change = me.budget - me.base;
+  return `<h1 class="ask">${esc(S.city)}</h1>
+    <p class="lede">${esc(describe(S.city, S.profile))}</p>
+    <h2 class="sub">How your choices shaped your budget</h2>
+    <div class="scroll"><table class="breakdown">${breakdownRows(me)}</table></div>
+    <div class="reveal"><span>Next year’s budget, per comptroller:</span><strong id="reveal">${fmt(me.budget)}</strong></div>
+    <p class="lede">${change === 0 ? 'Your choices didn’t change your starting budget.'
+      : `Your choices ${change > 0 ? 'added' : 'took away'} ${fmt(change)}. `}The city’s departments have requested ${fmt(TOTAL_REQUESTED)}.</p>`;
+}
+
+// The one animated moment: the budget counts up when it's revealed.
+function countUp(el, to){
+  if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const t0 = performance.now(), dur = 1100;
+  const tick = t => {
+    const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = fmt(Math.round(to * e / 1000) * 1000);
+    if (k < 1) requestAnimationFrame(tick); else el.textContent = fmt(to);
+  };
+  requestAnimationFrame(tick);
+}
+
+function renderSheet(){
+  document.body.classList.add('working');
+  $('#ctx').innerHTML = `<span>Group ${S.group}</span><button class="link" id="switch">Switch group</button>`;
+  $('#switch').onclick = async () => { await flush(); S.me = null; renderJoin(); };
+  const nav = DEPARTMENTS.map(d => `<a href="#d-${d.id}">${esc(d.name)}</a>`).join('');
+  const depts = DEPARTMENTS.map(d => `
+    <section class="dept" id="d-${d.id}" aria-labelledby="h-${d.id}">
+      <div class="dept-head">
+        <h2 id="h-${d.id}">${esc(d.name)}</h2>
+        <div class="dept-sum"><span>Department request <b>${fmt(d.total)}</b></span><span>Granted <b data-dg="${d.id}">$0</b></span></div>
+        <div class="dept-bar"><i data-db="${d.id}"></i></div>
+      </div>
+      <div class="cols" aria-hidden="true"><span></span><span>Requested</span><span>Granted</span></div>
+      ${d.items.map(it => `
+        <div class="item" data-id="${it.id}">
+          <p class="item-name" id="n-${it.id}">${esc(it.name)}</p>
+          <span class="req">${fmt(it.req)}</span>
+          <div class="ctl" role="group" aria-labelledby="n-${it.id}">
+            <button type="button" class="seg" data-act="deny" aria-pressed="false">Deny</button>
+            <button type="button" class="seg" data-act="fund" aria-pressed="false">Fund</button>
+            <label class="amt"><span>$</span><input type="text" inputmode="numeric" autocomplete="off" aria-label="Amount granted for ${esc(it.name)}"></label>
+          </div>
+        </div>`).join('')}
+    </section>`).join('');
+  $('#app').innerHTML = `
+    <div class="cityhead">
+      <div><h1 class="cityname">${esc(S.city)}</h1>
+        <p class="profile-line">${esc(describe(S.city, S.profile))} <button class="link" id="rename">Rename city</button></p></div>
+      <div class="comptroller"><span>Next year’s budget, per comptroller:</span><strong id="budgetBig"></strong></div>
+    </div>
+    <details class="how"><summary>How your city’s choices shaped this budget</summary><div class="scroll"><table class="breakdown" id="how"></table></div></details>
+    <div id="banner" role="status"></div>
+    <nav class="deptnav" aria-label="Departments">${nav}</nav>
+    ${depts}`;
+  $('#ledger').innerHTML = `
+    <div class="ledger-in">
+      <dl class="ledger-nums">
+        <div class="req-total"><dt>Total requested</dt><dd>${fmt(TOTAL_REQUESTED)}</dd></div>
+        <div><dt>Budgeted</dt><dd id="lBudget"></dd></div>
+        <div><dt>Total granted</dt><dd id="lGranted"></dd></div>
+        <div class="var"><dt>Variance</dt><dd id="lVar"></dd></div>
+      </dl>
+      <div class="meter" id="meter"><i></i></div>
+      <div class="ledger-row"><span><span id="decided"></span> <span id="saveState" role="status"></span></span><span id="ledgerBtn"></span></div>
+    </div>`;
+  $('#ledger').hidden = false;
+
+  $('#rename').onclick = async () => {
+    const name = prompt('New name for your city:', S.city);
+    if (name == null || !name.trim()) return;
+    try { const d = await call({ action: 'rename', group: S.group, city: name.trim() }); S.city = d.me.city; $('.cityname').textContent = S.city; $('.profile-line').firstChild.textContent = describe(S.city, S.profile) + ' '; }
+    catch (err) { setSaveState('Not renamed: ' + err.message, true); }
+  };
+
+  document.querySelectorAll('.item').forEach(row => {
+    const id = row.dataset.id, it = ITEM[id], input = row.querySelector('input');
+    row.querySelectorAll('.seg').forEach(b => b.addEventListener('click', () => {
+      if (S.locked || S.submitted) return;
+      const want = b.dataset.act === 'fund' ? it.req : 0;
+      S.alloc[id] = (S.alloc[id] === want) ? null : want;   // pressing the same button again clears it
+      if (S.alloc[id] === null) delete S.alloc[id];
+      paintItem(id); totals(); queueSave();
+    }));
+    input.addEventListener('input', () => {
+      const n = num(input.value);
+      if (n === null) delete S.alloc[id]; else S.alloc[id] = Math.min(n, it.req);
+      paintItem(id, true); totals(); queueSave();
+    });
+    input.addEventListener('blur', () => paintItem(id));
+    paintItem(id);
+  });
+  applyMode(); totals();
+}
+
+function paintItem(id, typing){
+  const row = document.querySelector(`.item[data-id="${id}"]`);
+  if (!row) return;
+  const it = ITEM[id], v = S.alloc[id];
+  const has = v !== undefined && v !== null;
+  row.querySelector('[data-act=deny]').setAttribute('aria-pressed', String(has && v === 0));
+  row.querySelector('[data-act=fund]').setAttribute('aria-pressed', String(has && v === it.req));
+  row.classList.toggle('partial', has && v > 0 && v < it.req);
+  const input = row.querySelector('input');
+  if (!typing) input.value = has ? v.toLocaleString('en-US') : '';
+}
+
+function totals(){
+  if (!$('#budgetBig')) return;   // still on the setup screens
+  const dt = deptTotals(S.alloc);
+  DEPARTMENTS.forEach(d => {
+    const el = document.querySelector(`[data-dg="${d.id}"]`); if (el) el.textContent = fmt(dt[d.id]);
+    const bar = document.querySelector(`[data-db="${d.id}"]`); if (bar) bar.style.width = Math.min(100, dt[d.id] / d.total * 100) + '%';
+  });
+  const granted = Object.values(S.alloc).reduce((s, v) => s + (Number(v) || 0), 0);
+  const budget = S.me ? S.me.budget : 0, variance = budget - granted;
+  const decided = Object.keys(S.alloc).filter(k => S.alloc[k] != null).length;
+  $('#budgetBig').textContent = fmt(budget);
+  const how = $('#how'); if (how && S.me) how.innerHTML = breakdownRows(S.me) + `<tr><th scope="row">Next year’s budget</th><td></td><td class="num">${fmt(S.me.budget)}</td></tr>`;
+  $('#lBudget').textContent = fmt(budget);
+  $('#lGranted').textContent = fmt(granted);
+  const v = $('#lVar');
+  v.innerHTML = fmt(variance) + (variance < 0 ? ' <small>over</small>' : variance > 0 ? ' <small>left</small>' : '');
+  v.classList.toggle('over', variance < 0);
+  const m = $('#meter');
+  m.classList.toggle('over', variance < 0);
+  m.querySelector('i').style.width = (budget ? Math.min(100, granted / budget * 100) : 0) + '%';
+  $('#decided').textContent = `${decided} of ${ITEMS.length} requests decided.`;
+  renderLedgerButton(variance);
+}
+
+function renderLedgerButton(variance){
+  const box = $('#ledgerBtn');
+  if (S.locked) { box.innerHTML = ''; return; }
+  if (S.submitted) {
+    box.innerHTML = '<button class="ghost" id="unsubmit">Keep editing</button>';
+    $('#unsubmit').onclick = () => { S.submitted = false; applyMode(); queueSave(true); };
+  } else {
+    box.innerHTML = `<button class="primary" id="submit"${variance < 0 ? ' disabled title="Cut grants until you’re within budget."' : ''}>Submit our budget</button>`;
+    $('#submit').onclick = () => { S.submitted = true; applyMode(); queueSave(true); };
+  }
+}
+
+function applyMode(){
+  if (!$('#banner')) return;      // still on the setup screens
+  document.body.classList.toggle('locked', S.locked);
+  document.body.classList.toggle('submitted', S.submitted && !S.locked);
+  const rn = $('#rename'); if (rn) rn.hidden = S.locked;
+  document.querySelectorAll('.item input').forEach(i => { i.readOnly = S.locked || S.submitted; });
+  document.querySelectorAll('.seg').forEach(b => { b.disabled = S.locked || S.submitted; });
+  const b = $('#banner');
+  if (S.locked) b.innerHTML = '<p><strong>Budgets are locked.</strong> Your teacher can see your budget; you can’t change it right now.</p>';
+  else if (S.submitted) b.innerHTML = '<p><strong>Budget submitted.</strong> Your teacher can see it. Choose <em>Keep editing</em> at the bottom of the screen to make changes.</p>';
+  else b.innerHTML = '';
+  totals();
+}
+
+/* ----- saving: never redraws the inputs a student is using ----- */
+function queueSave(now){
+  S.version++;
+  clearTimeout(S.pending);
+  setSaveState('Saving…');
+  S.pending = setTimeout(save, now ? 0 : CONFIG.SAVE_DELAY_MS);
+}
+
+function payload(){
+  const depts = {};
+  const dt = deptTotals(S.alloc);
+  DEPARTMENTS.forEach(d => { depts[d.name] = dt[d.id]; });
+  return { action: 'save', group: S.group, alloc: S.alloc, depts, submitted: S.submitted };
+}
+
+async function save(){
+  if (S.saving) { S.pending = setTimeout(save, 400); return; }
+  S.pending = null;
+  const v = S.version;
+  S.saving = true;
+  try {
+    const d = await call(payload());
+    S.savedVersion = Math.max(S.savedVersion, v);
+    Object.assign(S.me, { budget: d.me.budget, base: d.me.base, effects: d.me.effects });
+    S.lastError = '';
+    if (S.savedVersion === S.version) setSaveState('All changes saved.');
+  } catch (err) {
+    S.lastError = err.message;
+    if (/reset the simulation/i.test(err.message)) { notice(RESTARTED); S.me = null; S.version = S.savedVersion; renderJoin(); return; }
+    if (/locked/i.test(err.message)) { S.locked = true; applyMode(); }
+    if (S.submitted && /over by/i.test(err.message)) { S.submitted = false; applyMode(); }
+    setSaveState('Not saved: ' + err.message, true);
+    if (!S.locked) { clearTimeout(S.pending); S.pending = setTimeout(save, 8000); }
+  } finally {
+    S.saving = false;
+  }
+}
+
+function setSaveState(t, err){ const el = $('#saveState'); if (el) { el.textContent = t; el.classList.toggle('err', !!err); } }
+
+async function flush(){
+  if (S.pending) { clearTimeout(S.pending); S.pending = null; await save(); }
+}
+
+function flushOnLeave(){
+  if (!S.me || S.savedVersion === S.version || S.locked) return;
+  if (!CONFIG.API_URL) { try { Local.handle(payload()); } catch (e) {} return; }
+  try { navigator.sendBeacon(CONFIG.API_URL, new Blob([JSON.stringify(payload())], { type: 'text/plain' })); } catch (e) {}
+}
+
+/* ----- checking in: only the lock, the budget amount and the submitted flag ----- */
+async function poll(){
+  try {
+    const d = await call({ action: 'state', group: S.group });
+    if (!S.me) return;
+    if (!d.me) {
+      notice(RESTARTED);
+      clearTimeout(S.pending); S.pending = null; S.version = S.savedVersion;
+      S.me = null; renderJoin(); return;
+    }
+    notice('');
+    let changed = false;
+    if (d.me.budget !== S.me.budget) { Object.assign(S.me, { budget: d.me.budget, base: d.me.base, effects: d.me.effects }); changed = true; }
+    if (!!d.locked !== S.locked) { S.locked = !!d.locked; changed = true; }
+    const busy = S.pending || S.saving || S.savedVersion !== S.version;
+    if (!busy && !!d.me.submitted !== S.submitted) { S.submitted = !!d.me.submitted; changed = true; }
+    if (changed) applyMode();
+  } catch (err) { /* a missed check is fine; the next one will try again */ }
+}
+
+/* =========================================================
+   Teacher view (open the page with ?teacher at the end of the address)
+   ========================================================= */
+const T = { tab: 'progress', view: 'departments', dim: 'setting', data: null, sig: '', hold: false };
+
+function startTeacher(){
+  document.body.classList.add('teacher');
+  document.title = 'City budget dashboard';
+  $('.brand').textContent = 'Balancing a City Budget: teacher view';
+  const h = location.hash.slice(1);
+  if (['progress', 'priorities'].includes(h)) T.tab = h;
+  $('#app').innerHTML = `
+    <div class="tbar">
+      <div class="tabs" role="tablist" aria-label="Dashboard sections">
+        <button role="tab" data-tab="progress">Progress</button>
+        <button role="tab" data-tab="priorities">Priorities</button>
+      </div>
+      <div class="tactions" id="tactions"></div>
+    </div>
+    <div id="tbody"></div>
+    <p class="small muted" id="tstamp"></p>`;
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
+    T.tab = b.dataset.tab;
+    try { history.replaceState(null, '', location.pathname + location.search + '#' + T.tab); } catch (e) {}
+    tRender();
+  });
+  // Don't redraw while the teacher is choosing a budget from a menu.
+  $('#tbody').addEventListener('focusin', e => { if (e.target.tagName === 'SELECT') T.hold = true; });
+  $('#tbody').addEventListener('focusout', e => { if (e.target.tagName === 'SELECT') T.hold = false; });
+  tRefresh(true);
+  setInterval(() => { if (!document.hidden && !T.hold) tRefresh(false); }, CONFIG.TEACHER_POLL_MS);
+  if (!CONFIG.API_URL) window.addEventListener('storage', e => { if (e.key === Local.KEY && !T.hold) tRefresh(false); });
+}
+
+async function tRefresh(loud){
+  try {
+    const d = await call({ action: 'teacher' });
+    tTake(d);
+    notice('');
+  } catch (err) {
+    if (loud || !T.data) notice(err.message);
+  }
+}
+
+function tTake(d){
+  T.data = d;
+  $('#tstamp').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) + '. This page refreshes on its own.';
+  const sig = JSON.stringify([d.groups, d.locked, T.tab, T.view, T.dim]);
+  if (sig === T.sig) { tRelabelTimes(); return; }
+  T.sig = sig;
+  tRender();
+}
+
+function profileText(r){
+  const p = r.profile || {};
+  return PROFILE.map(q => p[q.key]).filter(Boolean).join(', ');
+}
+
+function label(r, short){ return short ? `G${r.group}` : `Group ${r.group}`; }
+
+function tRows(){
+  return (T.data ? T.data.groups : []).slice().sort((a, b) => a.group - b.group);
+}
+
+function tRender(){
+  document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === T.tab)));
+  const keep = {};
+  document.querySelectorAll('#tbody .scroll[id]').forEach(el => { keep[el.id] = el.scrollLeft; });
+  tActions();
+  const body = $('#tbody');
+  if (!T.data) { body.innerHTML = '<div class="panel empty">Loading…</div>'; return; }
+  body.innerHTML = T.tab === 'progress' ? tProgress() : tPriorities();
+  Object.keys(keep).forEach(id => { const el = document.getElementById(id); if (el) el.scrollLeft = keep[id]; });
+  body.querySelectorAll('select[data-budget]').forEach(s => s.onchange = async () => {
+    s.disabled = true;
+    try { tTake(await call({ action: 'setBudget', group: Number(s.dataset.budget), budget: Number(s.value) })); notice(''); }
+    catch (err) { notice(err.message); s.disabled = false; }
+    T.hold = false;
+  });
+  body.querySelectorAll('[data-view]').forEach(b => b.onclick = () => { T.view = b.dataset.view; T.sig = ''; tTake(T.data); });
+  body.querySelectorAll('[data-dim]').forEach(b => b.onclick = () => { T.dim = b.dataset.dim; T.sig = ''; tTake(T.data); });
+}
+
+function tActions(){
+  const box = $('#tactions');
+  if (!T.data) { box.innerHTML = ''; return; }
+  const locked = !!T.data.locked;
+  box.innerHTML = `<button class="${locked ? 'primary' : 'ghost'}" id="tLock">${locked ? 'Unlock budgets' : 'Lock budgets'}</button>
+    <button class="danger" id="tReset">Reset for everyone</button>`;
+  $('#tLock').onclick = async () => {
+    try { tTake(await call({ action: 'setLock', locked: !locked })); T.sig = ''; tRender(); } catch (err) { notice(err.message); }
+  };
+  $('#tReset').onclick = async () => {
+    if (!confirm('Reset the simulation for everyone? Every group’s budget moves to the Archive tab in the Google Sheet, open student screens go back to the group picker, and each group gets a new random budget when it opens the site again.')) return;
+    try { tTake(await call({ action: 'reset' })); T.sig = ''; tRender(); } catch (err) { notice(err.message); }
+  };
+}
+
+function tRelabelTimes(){
+  document.querySelectorAll('[data-at]').forEach(el => { el.textContent = ago(el.dataset.at); });
+}
+
+/* ----- progress ----- */
+function tProgress(){
+  const rows = tRows();
+  const byGroup = {};
+  rows.forEach(r => { byGroup[r.group] = r; });
+  const max = Math.max(CONFIG.GROUP_COUNT, ...rows.map(r => r.group));
+  const list = [];
+  for (let g = 1; g <= max; g++) list.push(byGroup[g] || { group: g, missing: true });
+    const choices = T.data.budgets || [];
+  const started = list.filter(r => !r.missing);
+  const submitted = started.filter(r => r.submitted).length;
+  const locked = !!T.data.locked;
+  const lines = list.map(r => {
+    if (r.missing) return `<tr><th scope="row">${esc(label(r))}</th><td colspan="9"><span class="pill none">Not started</span></td></tr>`;
+    const variance = r.budget - r.granted;
+    const over = variance < 0;
+    const opts = [...new Set([...choices, r.base])].sort((a, b) => b - a)
+      .map(b => `<option value="${b}"${b === r.base ? ' selected' : ''}>${fmt(b)}</option>`).join('');
+    const change = r.budget - r.base;
+    const final = r.profileSet
+      ? `<strong>${fmt(r.budget)}</strong><small class="${change < 0 ? 'neg' : change > 0 ? 'pos' : ''}">${change ? sign(change) + ' from choices' : 'No change from choices'}</small>`
+      : '<span class="muted">After setup</span>';
+    const status = !r.profileSet ? '<span class="pill none">Setting up</span>'
+      : r.submitted ? '<span class="pill sub">Submitted</span>'
+      : over ? '<span class="pill over">Over budget</span>'
+      : r.decided ? '<span class="pill">Working</span>' : '<span class="pill none">Opened</span>';
+    return `<tr>
+      <th scope="row">${esc(label(r))}</th>
+      <td class="city">${r.city ? esc(r.city) : '<span class="muted">No name yet</span>'}${profileText(r) ? `<small>${esc(profileText(r))}</small>` : ''}</td>
+      <td><select data-budget="${r.group}" aria-label="Starting budget for ${esc(label(r))}">${opts}</select></td>
+      <td class="num final">${final}</td>
+      <td class="num">${fmt(r.granted)}</td>
+      <td class="num${over ? ' over-t' : ''}">${over ? fmt(variance) + ' over' : fmt(variance) + ' left'}</td>
+      <td><div class="mini${over ? ' over' : ''}"><i style="width:${r.budget ? Math.min(100, r.granted / r.budget * 100) : 0}%"></i></div></td>
+      <td class="num">${r.decided} of ${ITEMS.length}</td>
+      <td>${status}</td>
+      <td class="muted" data-at="${esc(r.updated || '')}">${ago(r.updated)}</td>
+    </tr>`;
+  }).join('');
+  const summary = `${submitted} of ${list.length} groups have submitted. Budgets are ${locked ? 'locked, so students can’t change them' : 'open for editing'}.`;
+  return `<section class="panel">
+    <p>${summary}</p>
+    <div class="scroll" id="sc-prog"><table class="prog">
+      <thead><tr><th>Group</th><th>City</th><th>Starting budget</th><th class="num">Budget after choices</th><th class="num">Granted</th><th class="num">Variance</th><th>Share of budget granted</th><th class="num">Decided</th><th>Status</th><th>Last change</th></tr></thead>
+      <tbody>${lines}</tbody></table></div>
+  </section>`;
+}
+
+/* ----- priorities ----- */
+function tPriorities(){
+  const rows = tRows().filter(r => r.decided > 0);
+  if (!rows.length) return '<div class="panel empty">Priorities appear here as soon as groups start granting requests.</div>';
+  const dts = rows.map(r => deptTotals(r.alloc));
+  // A department counts for a group once the group has decided at least one of its requests.
+  const touched = (r, d) => d.items.some(it => r.alloc[it.id] != null);
+  const share = (i, d) => touched(rows[i], d) ? dts[i][d.id] / d.total : null;
+
+  // Class priorities: average share of each department's request that groups granted
+  const avg = DEPARTMENTS.map(d => {
+    const idx = rows.map((r, i) => i).filter(i => touched(rows[i], d));
+    const n = idx.length;
+    return { d, n, pct: n ? idx.reduce((s, i) => s + dts[i][d.id] / d.total, 0) / n : null,
+             dollars: n ? idx.reduce((s, i) => s + dts[i][d.id], 0) / n : 0 };
+  });
+  const ranked = avg.slice().sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1));
+  const rank = ranked.map(a => a.pct === null ? `
+    <span>${esc(a.d.name)}</span><div class="bar-t"></div><span class="pct muted">–</span>` : `
+    <span>${esc(a.d.name)}</span>
+    <div class="bar-t" title="${Math.round(a.pct * 100)}% of ${fmt(a.d.total)} requested; ${fmt(a.dollars)} on average across ${a.n} group${a.n === 1 ? '' : 's'}"><i style="width:${a.pct * 100}%"></i></div>
+    <span class="pct">${Math.round(a.pct * 100)}%</span>`).join('');
+
+  // Heat map cells (also used by the city-type table)
+  const cell = (pct, title, extra) => {
+    const x = extra ? ' ' + extra : '';
+    if (pct === null) return `<td class="nd${x}" title="${esc(title)}: not decided">–</td>`;
+    const p = Math.round(pct * 100);
+    return `<td class="${p > 55 ? 'hi' : ''}${x}" style="background:color-mix(in srgb, var(--heat) ${Math.max(4, p)}%, var(--surface))" title="${esc(title)}: ${p}%">${p}%</td>`;
+  };
+  const head = rows.map(r => `<th scope="col" title="${esc([r.city, profileText(r)].filter(Boolean).join(': '))}">${esc(label(r, true))}<small>${esc(r.city || '')}</small></th>`).join('');
+  let hbody = '';
+  if (T.view === 'departments') {
+    hbody = DEPARTMENTS.map(d => `<tr><th scope="row">${esc(d.name)}</th>${
+      rows.map((r, i) => cell(share(i, d), label(r) + ', ' + d.name)).join('')}${
+      cell(avg.find(a => a.d === d).pct, 'Class average, ' + d.name, 'avg')}</tr>`).join('');
+  } else {
+    hbody = DEPARTMENTS.map(d => `<tr><th scope="row" class="dept-row" colspan="${rows.length + 2}">${esc(d.name)}</th></tr>` +
+      d.items.map(it => {
+        const vals = rows.map(r => r.alloc[it.id] == null ? null : r.alloc[it.id] / it.req);
+        const dec = vals.filter(v => v !== null);
+        const mean = dec.length ? dec.reduce((s, v) => s + v, 0) / dec.length : null;
+        return `<tr><th scope="row">${esc(it.name)} <span class="muted small">${fmt(it.req)}</span></th>${
+          vals.map((v, i) => cell(v, label(rows[i]) + ', ' + it.name)).join('')}${
+          cell(mean, 'Class average, ' + it.name, 'avg')}</tr>`;
+      }).join('')).join('');
+  }
+
+  // By city type: average share granted by groups that chose each answer to one profile question
+  const dimQ = PROFILE.find(q => q.key === T.dim) || PROFILE[0];
+  const typeCols = dimQ.choices.map(c => ({ c, idx: rows.map((r, i) => i).filter(i => (rows[i].profile || {})[dimQ.key] === c.label) }));
+  const typeHead = typeCols.map(t => `<th scope="col">${esc(t.c.label)}<small>${t.idx.length} group${t.idx.length === 1 ? '' : 's'}</small></th>`).join('');
+  const typeBody = DEPARTMENTS.map(d => `<tr><th scope="row">${esc(d.name)}</th>${typeCols.map(t => {
+    const ix = t.idx.filter(i => touched(rows[i], d));
+    return cell(ix.length ? ix.reduce((s, i) => s + dts[i][d.id] / d.total, 0) / ix.length : null, `${t.c.label}, ${d.name}`);
+  }).join('')}</tr>`).join('');
+  const dimToggle = PROFILE.map(q => `<button data-dim="${q.key}" aria-pressed="${q.key === dimQ.key}">${esc(q.title)}</button>`).join('');
+
+  // Where each budget went
+  const scale = Math.max(...rows.map(r => Math.max(r.budget, r.granted)));
+  const legend = DEPARTMENTS.map(d => `<span><b style="background:${d.color}"></b>${esc(d.name)}</span>`).join('');
+  const stacks = rows.map((r, i) => `
+    <div class="stack-row">
+      <div class="lab">${esc(label(r))}<small>${r.city ? esc(r.city) + ', ' : ''}${fmt(r.granted)} of ${fmt(r.budget)}</small></div>
+      <div class="stack" role="img" aria-label="${esc(label(r))}: ${DEPARTMENTS.map(d => d.name + ' ' + fmt(dts[i][d.id])).join(', ')}">
+        <div class="track" style="width:${r.budget / scale * 100}%"></div>
+        <div class="segs" style="width:${r.granted / scale * 100}%">${
+          DEPARTMENTS.map(d => dts[i][d.id] ? `<i style="flex:${dts[i][d.id]} 0 0; background:${d.color}" title="${esc(d.name)}: ${fmt(dts[i][d.id])}"></i>` : '').join('')}</div>
+      </div>
+    </div>`).join('');
+
+  // Matched requests
+  const pairs = PAIRS.map(([a, b]) => {
+    const A = ITEM[a], B = ITEM[b];
+    const count = (it, test) => rows.filter(r => r.alloc[it.id] != null && test(r.alloc[it.id], it.req)).length;
+    const line = (lab, f) => `<tr><th scope="row">${lab}</th><td class="num">${f(A)}</td><td class="num">${f(B)}</td></tr>`;
+    return `<div class="pair"><table>
+      <thead><tr><th></th><th class="num">${esc(A.name)}</th><th class="num">${esc(B.name)}</th></tr></thead>
+      <tbody>
+        ${line('Funded in full', it => count(it, (v, q) => v >= q))}
+        ${line('Partly funded', it => count(it, (v, q) => v > 0 && v < q))}
+        ${line('Denied', it => count(it, v => v === 0))}
+        ${line('Not decided', it => rows.filter(r => r.alloc[it.id] == null).length)}
+        ${line('Total granted', it => fmt(rows.reduce((s, r) => s + (Number(r.alloc[it.id]) || 0), 0)))}
+      </tbody></table></div>`;
+  }).join('');
+
+  const n = rows.length;
+  return `
+  <section class="panel">
+    <h3>Class priorities</h3>
+    <p class="small muted">Average share of each department’s request that groups granted, counting only groups that have decided at least one of its requests. ${n} group${n === 1 ? '' : 's'} so far.</p>
+    <div class="rank">${rank}</div>
+  </section>
+  <section class="panel">
+    <h3>By city type</h3>
+    <div class="toggle" role="group" aria-label="Compare cities by">${dimToggle}</div>
+    <p class="small muted">Average share of each department’s request granted by the groups that described their city this way.</p>
+    <div class="scroll" id="sc-type"><table class="heat">
+      <thead><tr><th></th>${typeHead}</tr></thead>
+      <tbody>${typeBody}</tbody></table></div>
+  </section>
+  <section class="panel">
+    <h3>Group by group</h3>
+    <div class="toggle" role="group" aria-label="Rows">
+      <button data-view="departments" aria-pressed="${T.view === 'departments'}">Departments</button>
+      <button data-view="projects" aria-pressed="${T.view === 'projects'}">Projects</button>
+    </div>
+    <p class="small muted">Each cell is the share of the request that group granted. A dash means the group hasn’t decided that request yet.</p>
+    <div class="scroll" id="sc-heat"><table class="heat">
+      <thead><tr><th></th>${head}<th scope="col" class="avg">Class</th></tr></thead>
+      <tbody>${hbody}</tbody></table></div>
+  </section>
+  <section class="panel">
+    <h3>Where each budget went</h3>
+    <p class="small muted">Colored bars show what each group granted, by department. The dashed outline is the group’s budget.</p>
+    <div class="legend">${legend}</div>
+    ${stacks}
+  </section>
+  <section class="panel">
+    <h3>Matched requests</h3>
+    <p class="small muted">Requests that are identical except for the neighborhood.</p>
+    <div class="pairs">${pairs}</div>
+  </section>`;
+}
+
+/* =========================================================
+   Start
+   ========================================================= */
+if (!CONFIG.API_URL) {
+  $('#demo').innerHTML = '<p>Demo mode: budgets are saved only in this browser, so other devices won’t see them. Open a second tab with <strong>?teacher</strong> on the address to try the teacher view. Add your Apps Script URL to <strong>CONFIG.API_URL</strong> before class.</p>';
+}
+if (new URLSearchParams(location.search).has('teacher')) startTeacher(); else startStudent();
+</script>
+</body>
+</html>
